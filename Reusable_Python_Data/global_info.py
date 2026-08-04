@@ -7,7 +7,7 @@ class Global_Info:
     Stat info is left to be added
     Once added, it will return the statistical summary like median, mean, etc for each df
     """
-    def __init__(self, filenames, dataframes):
+    def __init__(self, filenames: None, dataframes: None):
         self.fns = filenames
         self.dfs = dataframes
 
@@ -33,7 +33,25 @@ class Global_Info:
             print(f'UNIQUE COLUMNS:\n{self._unique_cols(df)}\n')
             print(f'COL DATA TYPES:\n{self._data_type(df)}\n\n')
 
-    def stat_info(self):
-        pass
+    def cat_max_min(df, cat_cols):
+        """
+        This is a class method.
+        It takes a df and the categorical cols then returns the min and max summary as a dataframe
+        """
+        summary = []
+        for col in cat_cols:
+            counts = df[col].value_counts()
+
+            summary.append({
+                'Column': col,
+                'Most Frequent': counts.idxmax(),
+                'Max Count': counts.max(),
+                'Least Frequent': counts.idxmin(),
+                'Min Count': counts.min()
+            })
+
+        summary_df = pd.DataFrame(summary)
+        return summary_df
+
 
     
