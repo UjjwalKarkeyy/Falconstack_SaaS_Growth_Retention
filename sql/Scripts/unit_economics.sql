@@ -1,13 +1,15 @@
 /*
 ARPU, LTV
 */
--- using view 'subscription_tbl' and left join on view 'accounts_tbl'
+
+--CREATE OR REPLACE VIEW arpu_ltv_vw AS
 WITH info_tbl AS (
-SELECT 
+SELECT
     s.account_id,
     s.mrr_amount,
     s.start_date,
     s.end_date,
+    s.end_date_status,
     a.churn_date
 FROM
     subscription_tbl AS s
@@ -15,82 +17,67 @@ LEFT JOIN accounts_tbl AS a
     ON
     s.account_id = a.account_id
 ),
--- setup table for arpu calculation
 setup_tbl AS (
 SELECT
-    STRFTIME(m.mnth, '%Y-%m') AS mnth,
-
-    SUM(
-        CASE
-            WHEN CAST(i.start_date AS DATE) <= m.mnth
-            AND (
-                i.end_date IN ('Ongoing', 'Unknown')
-                OR TRY_CAST(i.end_date AS DATE) >= m.mnth + INTERVAL '1 month'
-            )
-            AND (
-                i.churn_date IS NULL
-                OR TRY_CAST(i.churn_date AS DATE) >= m.mnth + INTERVAL '1 month'
-            )
-            THEN i.mrr_amount
-            ELSE 0
-        END
-    ) AS total_mrr,
-
-    COUNT(
-        DISTINCT CASE
-            WHEN CAST(i.start_date AS DATE) <= m.mnth
-            AND (
-                i.end_date IN ('Ongoing', 'Unknown')
-                OR TRY_CAST(i.end_date AS DATE) >= m.mnth + INTERVAL '1 month'
-            )
-            AND (
-                i.churn_date IS NULL
-                OR TRY_CAST(i.churn_date AS DATE) >= m.mnth + INTERVAL '1 month'
-            )
-            THEN i.account_id
-        END
-    ) AS active_cus
+    m.mnth,
+    SUM(CASE
+        WHEN i.start_date <= m.mnth
+        AND (
+            i.end_date_status = 'Ongoing'
+            OR i.end_date >= m.mnth + INTERVAL '1 month'
+        )
+        AND (
+            i.churn_date IS NULL
+            OR i.churn_date >= m.mnth + INTERVAL '1 month'
+        )
+        THEN i.mrr_amount
+        ELSE 0
+    END) AS total_mrr,
+    COUNT(DISTINCT CASE
+        WHEN i.start_date <= m.mnth
+        AND (
+            i.end_date_status = 'Ongoing'
+            OR i.end_date >= m.mnth + INTERVAL '1 month'
+        )
+        AND (
+            i.churn_date IS NULL
+            OR i.churn_date >= m.mnth + INTERVAL '1 month'
+        )
+        THEN i.account_id
+    END) AS active_cus
 FROM
     info_tbl AS i
 CROSS JOIN mnths_list AS m
 GROUP BY
     m.mnth
-ORDER BY
-    m.mnth
 ),
--- create arpu table
 arpu_tbl AS (
 SELECT
     s.*,
     ROUND(
         s.total_mrr
-        / NULLIF(s.active_cus, 0)
-        , 2
+        / NULLIF(s.active_cus, 0),
+        2
     ) AS arpu
 FROM
     setup_tbl AS s
-),
--- using view 'cus_churn_rate_tbl' for ltv
-ltv_arpu_tbl AS (
+)
+
 SELECT
     a.*,
     ROUND(
         a.arpu
-        / NULLIF(c.cus_churn_rate / 100.0, 0)
-        , 2
+        / NULLIF(c.cus_churn_rate / 100.0, 0),
+        2
     ) AS ltv,
     c.cus_churn_rate
 FROM
     arpu_tbl AS a
-LEFT JOIN cus_churn_rate_tbl AS c
+LEFT JOIN customer_churn_rate_vw AS c
     ON
     a.mnth = c.mnth
-)
-
-SELECT
-    l.*
-FROM
-    ltv_arpu_tbl AS l;
+ORDER BY
+    a.mnth;
 
 /*
     TABLES OF VALUE:
