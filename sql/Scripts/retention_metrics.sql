@@ -201,7 +201,7 @@ FROM
 SELECT
     c.*
 FROM
-    cohort_retention_tbl AS c;
+    cus_churn_rate_tbl AS c;
 
 /*
     TABLES OF VALUE:
