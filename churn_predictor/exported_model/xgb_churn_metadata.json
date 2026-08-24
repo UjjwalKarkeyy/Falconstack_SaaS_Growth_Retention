@@ -1,0 +1,40 @@
+{
+    "feature_columns": [
+        "is_trial",
+        "referral_source",
+        "industry",
+        "plan_tier",
+        "upgrade_flag",
+        "downgrade_flag",
+        "usage_count",
+        "usage_duration_secs",
+        "error_count",
+        "tickets_count"
+    ],
+    "categorical_columns": [
+        "referral_source",
+        "industry",
+        "plan_tier"
+    ],
+    "categories": {
+        "referral_source": [
+            "ads",
+            "event",
+            "organic",
+            "other",
+            "partner"
+        ],
+        "industry": [
+            "Cybersecurity",
+            "DevTools",
+            "EdTech",
+            "FinTech",
+            "HealthTech"
+        ],
+        "plan_tier": [
+            "Basic",
+            "Enterprise",
+            "Pro"
+        ]
+    }
+}
